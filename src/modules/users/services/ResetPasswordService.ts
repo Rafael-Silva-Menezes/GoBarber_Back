@@ -3,6 +3,7 @@ import { injectable, inject } from 'tsyringe';
 import AppError from '@shared/errors/AppError';
 import IUsersRepository from '../repositories/IUsersRepository';
 import IUsersTokenRepository from '../repositories/IUsersTokenRepository';
+import IHashProvider from '../providers/HashProvider/models/IHashProvider';
 
 interface IRequest {
   token: string;
@@ -17,9 +18,12 @@ class ResetPasswordService {
 
     @inject('UsersTokenRepository')
     private tokenRepository: IUsersTokenRepository,
+
+    @inject('HashProvider')
+    private hashProvider: IHashProvider,
   ) {}
 
-  public async execute({ password, token }: IRequest): Promise<void> {
+  public async execute({ token, password }: IRequest): Promise<void> {
     const userToken = await this.tokenRepository.findByToken(token);
 
     if (!userToken) {
@@ -31,7 +35,7 @@ class ResetPasswordService {
       throw new AppError('User does not exist');
     }
 
-    user.password = password;
+    user.password = await this.hashProvider.generateHash(password);
 
     await this.usersRepositorys.save(user);
   }
